@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOOL LÀM RAY – Nhập Thông Số</title>
+<!-- MQTT over WebSocket via MQTT.js CDN -->
+<script src="https://unpkg.com/mqtt@5.3.6/dist/mqtt.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --accent: #f0a500;
+    --accent2: #e05c00;
+    --green: #2ea043;
+    --red: #da3633;
+    --blue: #1f6feb;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --radius: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+    border-bottom: 2px solid var(--accent);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  header .logo {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 28px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  header .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--red);
+    margin-left: auto;
+    box-shadow: 0 0 8px var(--red);
+    transition: all 0.4s;
+  }
+  .status-dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .status-dot.sending { background: var(--accent); box-shadow: 0 0 12px var(--accent); animation: pulse 0.6s infinite alternate; }
+
+  @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
+
+  .status-text { font-size: 12px; color: var(--muted); }
+
+  /* ── MAIN ── */
+  main { max-width: 860px; margin: 0 auto; padding: 32px 20px; }
+
+  /* ── STEP SETUP ── */
+  .setup-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 28px;
+  }
+
+  .setup-card h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .setup-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .setup-row label { font-size: 15px; color: var(--text); }
+
+  .esp-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    font-size: 15px;
+    padding: 9px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .esp-input:focus { border-color: var(--accent); }
+  .esp-input[type=number] { width: 100px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 20px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.18s;
+  }
+
+  .btn-accent { background: var(--accent); color: #000; }
+  .btn-accent:hover { background: #ffc030; transform: translateY(-1px); }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-blue:hover { background: #388bfd; transform: translateY(-1px); }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-green:hover { background: #3fb950; transform: translateY(-1px); }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-red:hover { background: #f85149; transform: translateY(-1px); }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* ── TABS / PAGES ── */
+  .tabs-header {
+    display: flex;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px 10px 0 0;
+    overflow-x: auto;
+    border-bottom: none;
+    scrollbar-width: thin;
+  }
+
+  .tab-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--muted);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 11px 18px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.18s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn.done { color: var(--green); }
+  .tab-btn.done::after { content: ' ✓'; }
+
+  .tab-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 28px;
+    min-height: 340px;
+  }
+
+  /* ── FORM FIELDS ── */
+  .field-group { margin-bottom: 20px; }
+  .field-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+
+  .radio-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .radio-card {
+    position: relative;
+    cursor: pointer;
+  }
+  .radio-card input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .radio-card .rc-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    transition: all 0.18s;
+    cursor: pointer;
+    user-select: none;
+  }
+  .radio-card input:checked + .rc-label {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(240,165,0,0.08);
+  }
+
+  select.esp-input { appearance: none; cursor: pointer; padding-right: 30px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%238b949e' d='M4.427 6.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 6H4.604a.25.25 0 00-.177.427z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media(max-width:600px){ .two-col { grid-template-columns: 1fr; } }
+
+  /* ── NAV BOTTOM ── */
+  .tab-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .page-indicator {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ── SEND AREA ── */
+  .send-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-top: 28px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .send-info { flex: 1; }
+  .send-info h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .send-info p { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  /* ── LOG ── */
+  .log-box {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #7ee787;
+    height: 130px;
+    overflow-y: auto;
+    margin-top: 16px;
+    white-space: pre-wrap;
+  }
+
+  /* ── COMPLETION BANNER ── */
+  .banner {
+    display: none;
+    background: linear-gradient(135deg, rgba(46,160,67,0.15), rgba(46,160,67,0.05));
+    border: 2px solid var(--green);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-top: 20px;
+    align-items: center;
+    gap: 16px;
+  }
+  .banner.show { display: flex; }
+  .banner-icon { font-size: 36px; }
+  .banner-text h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; color: var(--green); }
+  .banner-text p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+  /* ── SUMMARY TABLE ── */
+  .summary-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+  .summary-table th, .summary-table td { padding: 8px 12px; border: 1px solid var(--border); text-align: left; }
+  .summary-table th { background: var(--surface2); color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .summary-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ── PROGRESS ── */
+  .progress-bar-wrap { background: var(--surface2); border-radius: 4px; height: 6px; margin-top: 8px; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.4s; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .chip {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 6px;
+  }
+
+  .field-hint { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .required-star { color: var(--red); }
+
+  /* ── MQTT STATUS BADGE ── */
+  .mqtt-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    transition: all 0.3s;
+  }
+  .mqtt-badge.connected { border-color: var(--green); color: var(--green); }
+  .mqtt-badge.error { border-color: var(--red); color: var(--red); }
+  .mqtt-badge .mqtt-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">⚙ Tool Làm Ray</div>
+    <div class="subtitle">Giao diện nhập thông số hàng loạt → ESP32-S3 (MQTT)</div>
+  </div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div class="mqtt-badge" id="mqttBadge">
+      <span class="mqtt-dot"></span>
+      <span id="mqttBadgeText">MQTT: Chưa kết nối</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="status-text" id="statusText">Chưa kết nối</span>
+      <div class="status-dot" id="statusDot"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- MQTT CONFIG CARD -->
+  <div class="setup-card">
+    <h2>📡 Cấu hình MQTT Broker</h2>
+    <div class="setup-row" style="flex-wrap:wrap;gap:16px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label>Broker Host:</label>
+        <input class="esp-input" type="text" id="mqttHost" value="192.168.1.100" placeholder="IP hoặc hostname" style="width:180px;">
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label>WebSocket Port:</label>
+        <input class="esp-input" type="number" id="mqttPort" value="9001" style="width:90px;">
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label>User:</label>
+        <input class="esp-input" type="text" id="mqttUser" value="" placeholder="(bỏ trống nếu không)" style="width:120px;">
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label>Pass:</label>
+        <input class="esp-input" type="password" id="mqttPass" value="" placeholder="(bỏ trống)" style="width:120px;">
+      </div>
+      <button class="btn btn-ghost" onclick="mqttConnect()">🔌 Kết nối MQTT</button>
+      <button class="btn btn-red" onclick="mqttDisconnect()" id="btnDisconnect" disabled>✕ Ngắt kết nối</button>
+    </div>
+    <div style="margin-top:12px;font-size:12px;color:var(--muted);">
+      💡 Broker cần bật WebSocket (ws://). Ví dụ Mosquitto: <code>listener 9001 / protocol websockets</code>
+    </div>
+  </div>
+
+  <!-- SETUP CARD -->
+  <div class="setup-card">
+    <h2>⚙ Số lượng bộ ray</h2>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <label style="font-size:15px;">Tổng số bộ ray cần cắt: <span class="required-star">*</span></label>
+      <input class="esp-input" type="number" id="totalRay" value="1" min="1" max="50" style="width:90px;" oninput="onTotalChange()">
+      <button class="btn btn-accent" onclick="generateTabs()">▶ Tạo trang nhập</button>
+    </div>
+  </div>
+
+  <!-- TABS CONTAINER -->
+  <div id="tabsArea" style="display:none;">
+    <div class="tabs-header" id="tabsHeader"></div>
+    <div class="tab-content" id="tabContent"></div>
+
+    <!-- PROGRESS -->
+    <div style="margin-top:16px;display:flex;align-items:center;gap:12px;">
+      <span style="font-size:13px;color:var(--muted);">Tiến độ nhập:</span>
+      <div class="progress-bar-wrap" style="flex:1;">
+        <div class="progress-bar" id="progressBar" style="width:0%"></div>
+      </div>
+      <span style="font-size:13px;color:var(--muted);" id="progressText">0 / 0</span>
+    </div>
+  </div>
+
+  <!-- SEND CARD -->
+  <div class="send-card" id="sendCard" style="display:none;">
+    <div class="send-info">
+      <h3>📤 Gửi toàn bộ dữ liệu sang ESP32-S3 (MQTT)</h3>
+      <p id="sendSummaryLine">Sẵn sàng gửi dữ liệu...</p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-ghost" onclick="showSummary()">📋 Xem tóm tắt</button>
+      <button class="btn btn-green" id="btnSend" onclick="sendAllData()">✅ Xác nhận &amp; Gửi MQTT</button>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div id="logArea" style="display:none;">
+    <div style="display:flex;align-items:center;gap:10px;margin-top:24px;">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;">Nhật ký MQTT</span>
+      <button class="btn btn-ghost" style="padding:4px 12px;font-size:12px;" onclick="clearLog()">Xóa</button>
+    </div>
+    <div class="log-box" id="logBox"></div>
+  </div>
+
+  <!-- SUMMARY MODAL -->
+  <div id="summaryOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;max-width:700px;width:90%;max-height:80vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--accent);text-transform:uppercase;">Tóm tắt dữ liệu sẽ gửi</span>
+        <button class="btn btn-ghost" style="padding:6px 14px;" onclick="hideSummary()">✕ Đóng</button>
+      </div>
+      <div id="summaryContent"></div>
+    </div>
+  </div>
+
+  <!-- COMPLETION BANNER -->
+  <div class="banner" id="completionBanner">
+    <div class="banner-icon">🎉</div>
+    <div class="banner-text">
+      <h3>Hoàn tất toàn bộ!</h3>
+      <p id="completionMsg">ESP32-S3 đã xác nhận hoàn thành tất cả các bộ ray.</p>
+    </div>
+    <button class="btn btn-accent" style="margin-left:auto;" onclick="resetAll()">🔄 Làm mới</button>
+  </div>
+
+</main>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let totalRay   = 0;
+let currentTab = 0;
+let rayData    = [];
+let doneFlags  = [];
+
+const DONG_CO_OPTIONS = ['C3','AOK','Dooya'];
+const LOAI_BI_OPTIONS = ['Bi xếp li','Bi đv 6','Bi đv 7','Bi đv 8'];
+
+// ============================================================
+// MQTT CLIENT
+// ============================================================
+let mqttClient = null;
+
+// Topics (phải khớp với ESP32-S3)
+const TOPIC_DATA_IN   = 'ray/data';      // Web → ESP32: gửi dữ liệu
+const TOPIC_CONFIRM   = 'ray/confirm';   // ESP32 → Web: xác nhận hoàn tất
+const TOPIC_STATUS    = 'ray/status';    // ESP32 → Web: trạng thái
+
+function getMqttUrl() {
+  const host = document.getElementById('mqttHost').value.trim();
+  const port = document.getElementById('mqttPort').value.trim();
+  return `ws://${host}:${port}/mqtt`;
+}
+
+function mqttConnect() {
+  if (mqttClient && mqttClient.connected) {
+    log('⚠ Đã kết nối rồi.','#e3b341');
+    return;
+  }
+
+  const url  = getMqttUrl();
+  const user = document.getElementById('mqttUser').value.trim();
+  const pass = document.getElementById('mqttPass').value.trim();
+
+  log(`📡 Đang kết nối MQTT: ${url}`,'#e3b341');
+  setMqttStatus('connecting');
+
+  const opts = {
+    clientId: 'WebRayTool_' + Math.random().toString(16).substr(2,8),
+    clean: true,
+    reconnectPeriod: 0,  // tự quản lý
+  };
+  if (user) { opts.username = user; opts.password = pass; }
+
+  mqttClient = mqtt.connect(url, opts);
+
+  mqttClient.on('connect', () => {
+    log('✅ Đã kết nối MQTT Broker!','#3fb950');
+    setMqttStatus('connected');
+    setStatus('connected');
+    document.getElementById('btnDisconnect').disabled = false;
+
+    // Subscribe nhận xác nhận từ ESP32-S3
+    mqttClient.subscribe(TOPIC_CONFIRM, err => {
+      if (!err) log(`🔔 Đã subscribe: ${TOPIC_CONFIRM}`);
+    });
+    mqttClient.subscribe(TOPIC_STATUS, err => {
+      if (!err) log(`🔔 Đã subscribe: ${TOPIC_STATUS}`);
+    });
+  });
+
+  mqttClient.on('message', (topic, message) => {
+    const msg = message.toString();
+    log(`📥 [${topic}] ${msg}`,'#8b949e');
+
+    if (topic === TOPIC_CONFIRM) {
+      try {
+        const data = JSON.parse(msg);
+        if (data.status === 'completed') {
+          showCompletion(`ESP32-S3 xác nhận hoàn tất lúc ${new Date().toLocaleTimeString('vi-VN')}`);
+        }
+      } catch(e) { /* ignore */ }
+    }
+
+    if (topic === TOPIC_STATUS) {
+      try {
+        const data = JSON.parse(msg);
+        log(`📊 Status ESP32: ${JSON.stringify(data)}`,'#8b949e');
+      } catch(e) { /* ignore */ }
+    }
+  });
+
+  mqttClient.on('error', (err) => {
+    log('❌ Lỗi MQTT: ' + err.message,'#f85149');
+    setMqttStatus('error');
+    setStatus('');
+  });
+
+  mqttClient.on('close', () => {
+    log('🔌 MQTT đã ngắt kết nối.','#8b949e');
+    setMqttStatus('disconnected');
+    setStatus('');
+    document.getElementById('btnDisconnect').disabled = true;
+  });
+
+  mqttClient.on('offline', () => {
+    log('📴 MQTT offline.','#8b949e');
+    setMqttStatus('disconnected');
+  });
+}
+
+function mqttDisconnect() {
+  if (mqttClient) {
+    mqttClient.end(true);
+    mqttClient = null;
+    log('🔌 Đã ngắt kết nối MQTT.','#8b949e');
+    setMqttStatus('disconnected');
+    setStatus('');
+    document.getElementById('btnDisconnect').disabled = true;
+  }
+}
+
+function setMqttStatus(state) {
+  const badge = document.getElementById('mqttBadge');
+  const text  = document.getElementById('mqttBadgeText');
+  badge.className = 'mqtt-badge';
+  if (state === 'connected') {
+    badge.classList.add('connected');
+    text.textContent = 'MQTT: Đã kết nối';
+  } else if (state === 'error') {
+    badge.classList.add('error');
+    text.textContent = 'MQTT: Lỗi kết nối';
+  } else if (state === 'connecting') {
+    text.textContent = 'MQTT: Đang kết nối...';
+  } else {
+    text.textContent = 'MQTT: Chưa kết nối';
+  }
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function log(msg, color='#7ee787') {
+  const box = document.getElementById('logBox');
+  const time = new Date().toLocaleTimeString('vi-VN');
+  box.innerHTML += `<span style="color:${color}">[${time}] ${msg}</span>\n`;
+  box.scrollTop = box.scrollHeight;
+  document.getElementById('logArea').style.display = 'block';
+}
+
+function clearLog() { document.getElementById('logBox').innerHTML = ''; }
+
+function setStatus(state) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.className = 'status-dot';
+  if (state==='connected')    { dot.classList.add('connected'); txt.textContent='Đã kết nối'; txt.style.color='var(--green)'; }
+  else if (state==='sending') { dot.classList.add('sending');   txt.textContent='Đang gửi...'; txt.style.color='var(--accent)'; }
+  else { txt.textContent='Chưa kết nối'; txt.style.color='var(--muted)'; }
+}
+
+// ============================================================
+// GENERATE TABS
+// ============================================================
+function generateTabs() {
+  const n = parseInt(document.getElementById('totalRay').value);
+  if (!n || n < 1 || n > 50) { alert('Vui lòng nhập số bộ ray từ 1 đến 50!'); return; }
+
+  totalRay   = n;
+  currentTab = 0;
+
+  rayData = Array.from({length:n}, (_,i) => ({
+    id: i+1,
+    ray_length: '',
+    mo_1_ben: true,
+    cat_doi: true,
+    dong_co: 0,
+    co_dau_phu: false,
+    loai_bi: 0,
+  }));
+  doneFlags = Array(n).fill(false);
+
+  renderTabs();
+  renderTabContent(0);
+  updateProgress();
+
+  document.getElementById('tabsArea').style.display = 'block';
+  document.getElementById('sendCard').style.display = 'flex';
+  document.getElementById('sendCard').style.marginTop = '28px';
+  document.getElementById('sendSummaryLine').textContent =
+    `Tổng ${n} bộ ray – nhập đầy đủ rồi nhấn Xác nhận & Gửi MQTT`;
+}
+
+function onTotalChange() {}
+
+// ============================================================
+// RENDER TABS
+// ============================================================
+function renderTabs() {
+  const header = document.getElementById('tabsHeader');
+  header.innerHTML = '';
+  for (let i=0; i<totalRay; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i===currentTab?' active':'') + (doneFlags[i]?' done':'');
+    btn.textContent = `Bộ ${i+1}`;
+    btn.onclick = () => switchTab(i);
+    header.appendChild(btn);
+  }
+}
+
+function switchTab(i) {
+  saveCurrentTab();
+  currentTab = i;
+  renderTabs();
+  renderTabContent(i);
+}
+
+// ============================================================
+// RENDER TAB CONTENT
+// ============================================================
+function renderTabContent(i) {
+  const d = rayData[i];
+  document.getElementById('tabContent').innerHTML = `
+    <div style="margin-bottom:20px;display:flex;align-items:center;gap:10px;">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--accent);text-transform:uppercase;">
+        Thông số bộ ${i+1}
+      </span>
+      <span class="chip">${i+1} / ${totalRay}</span>
+    </div>
+
+    <div class="two-col">
+      <div class="field-group">
+        <label>Chiều dài ray hoàn thiện (cm) <span class="required-star">*</span></label>
+        <input class="esp-input" type="number" id="f_length" value="${d.ray_length}"
+          min="1" max="9999" placeholder="VD: 350" style="width:140px;"
+          oninput="autoSave()">
+        <div class="field-hint">Chiều dài ray nguyên liệu ban đầu</div>
+      </div>
+      <div class="field-group">
+        <label>Loại bi</label>
+        <select class="esp-input" id="f_loai_bi" onchange="autoSave()" style="width:160px;">
+          ${LOAI_BI_OPTIONS.map((o,j)=>`<option value="${j}" ${d.loai_bi===j?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="field-group">
+        <label>Kiểu mở</label>
+        <div class="radio-row">
+          <label class="radio-card">
+            <input type="radio" name="f_mo" value="1" ${d.mo_1_ben?'checked':''} onchange="autoSave()">
+            <span class="rc-label">→ Mở 1 bên</span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="f_mo" value="0" ${!d.mo_1_ben?'checked':''} onchange="autoSave()">
+            <span class="rc-label">↔ Mở 2 bên</span>
+          </label>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Kiểu cắt</label>
+        <div class="radio-row">
+          <label class="radio-card">
+            <input type="radio" name="f_cat" value="1" ${d.cat_doi?'checked':''} onchange="autoSave()">
+            <span class="rc-label">✂ Cắt đôi</span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="f_cat" value="0" ${!d.cat_doi?'checked':''} onchange="autoSave()">
+            <span class="rc-label">▬ Để nguyên</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="field-group">
+        <label>Đầu động cơ</label>
+        <select class="esp-input" id="f_dong_co" onchange="autoSave()" style="width:140px;">
+          ${DONG_CO_OPTIONS.map((o,j)=>`<option value="${j}" ${d.dong_co===j?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Đầu phụ</label>
+        <label class="radio-card" style="margin-top:4px;">
+          <input type="checkbox" id="f_dau_phu" ${d.co_dau_phu?'checked':''} onchange="autoSave()">
+          <span class="rc-label">Có đầu phụ</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="btn btn-ghost" onclick="prevTab()" ${i===0?'disabled':''}>‹ Trước</button>
+      <span class="page-indicator">Bộ ${i+1} / ${totalRay}</span>
+      ${i < totalRay-1
+        ? `<button class="btn btn-blue" onclick="nextTab()">Tiếp ›</button>`
+        : `<button class="btn btn-green" onclick="markAllDone()">✅ Hoàn tất nhập liệu</button>`}
+    </div>
+  `;
+}
+
+// ============================================================
+// SAVE / NAVIGATION
+// ============================================================
+function saveCurrentTab() {
+  const d = rayData[currentTab];
+  const lenEl = document.getElementById('f_length');
+  if (!lenEl) return;
+
+  d.ray_length = parseInt(lenEl.value) || 0;
+  d.mo_1_ben   = document.querySelector('input[name="f_mo"]:checked')?.value === '1';
+  d.cat_doi    = document.querySelector('input[name="f_cat"]:checked')?.value === '1';
+  d.dong_co    = parseInt(document.getElementById('f_dong_co').value);
+  d.co_dau_phu = document.getElementById('f_dau_phu').checked;
+  d.loai_bi    = parseInt(document.getElementById('f_loai_bi').value);
+
+  doneFlags[currentTab] = d.ray_length > 0;
+  updateProgress();
+}
+
+function autoSave() { saveCurrentTab(); renderTabs(); }
+
+function nextTab() { saveCurrentTab(); if (currentTab < totalRay-1) { currentTab++; renderTabs(); renderTabContent(currentTab); } }
+function prevTab() { saveCurrentTab(); if (currentTab > 0)         { currentTab--; renderTabs(); renderTabContent(currentTab); } }
+
+function markAllDone() {
+  saveCurrentTab();
+  const missing = rayData.filter(d => !d.ray_length || d.ray_length <= 0);
+  if (missing.length > 0) {
+    alert(`Còn ${missing.length} bộ ray chưa nhập chiều dài! (Bộ: ${missing.map(d=>d.id).join(', ')})`);
+    return;
+  }
+  doneFlags = Array(totalRay).fill(true);
+  renderTabs();
+  updateProgress();
+  log(`✅ Đã hoàn tất nhập liệu ${totalRay} bộ ray. Nhấn "Xác nhận & Gửi MQTT" để truyền sang ESP32-S3.`,'#3fb950');
+  document.getElementById('sendCard').scrollIntoView({behavior:'smooth'});
+}
+
+function updateProgress() {
+  const done = doneFlags.filter(Boolean).length;
+  const pct  = totalRay ? (done/totalRay*100).toFixed(0) : 0;
+  document.getElementById('progressBar').style.width = pct+'%';
+  document.getElementById('progressText').textContent = `${done} / ${totalRay}`;
+}
+
+// ============================================================
+// SUMMARY
+// ============================================================
+function showSummary() {
+  saveCurrentTab();
+  const rows = rayData.map(d => `
+    <tr>
+      <td style="color:var(--accent);font-weight:700;">${d.id}</td>
+      <td>${d.ray_length || '<span style="color:var(--red)">Chưa nhập</span>'} cm</td>
+      <td>${d.mo_1_ben ? 'Mở 1 bên' : 'Mở 2 bên'}</td>
+      <td>${d.cat_doi ? 'Cắt đôi' : 'Để nguyên'}</td>
+      <td>${DONG_CO_OPTIONS[d.dong_co]}</td>
+      <td>${d.co_dau_phu ? '✓ Có' : '–'}</td>
+      <td>${LOAI_BI_OPTIONS[d.loai_bi]}</td>
+    </tr>`).join('');
+
+  document.getElementById('summaryContent').innerHTML = `
+    <table class="summary-table">
+      <thead>
+        <tr><th>#</th><th>Dài (cm)</th><th>Kiểu mở</th><th>Kiểu cắt</th>
+            <th>Động cơ</th><th>Đầu phụ</th><th>Loại bi</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  document.getElementById('summaryOverlay').style.display = 'flex';
+}
+
+function hideSummary() { document.getElementById('summaryOverlay').style.display = 'none'; }
+
+// ============================================================
+// SEND DATA VIA MQTT
+// ============================================================
+function sendAllData() {
+  saveCurrentTab();
+
+  const missing = rayData.filter(d => !d.ray_length || d.ray_length <= 0);
+  if (missing.length > 0) {
+    alert(`Vui lòng nhập chiều dài cho: Bộ ${missing.map(d=>d.id).join(', ')}`);
+    return;
+  }
+
+  if (!mqttClient || !mqttClient.connected) {
+    alert('Chưa kết nối MQTT! Vui lòng kết nối broker trước.');
+    return;
+  }
+
+  setStatus('sending');
+  document.getElementById('btnSend').disabled = true;
+  log(`📤 Đang gửi ${totalRay} bộ ray qua MQTT → topic: ${TOPIC_DATA_IN}...`,'#e3b341');
+
+  const payload = {
+    total: totalRay,
+    rays: rayData.map(d => ({
+      id:         d.id,
+      ray_length: d.ray_length,
+      mo_1_ben:   d.mo_1_ben   ? 1 : 0,
+      cat_doi:    d.cat_doi    ? 1 : 0,
+      dong_co:    d.dong_co,
+      co_dau_phu: d.co_dau_phu ? 1 : 0,
+      loai_bi:    d.loai_bi
+    }))
+  };
+
+  const json = JSON.stringify(payload);
+  log('Payload: ' + json,'#8b949e');
+
+  mqttClient.publish(TOPIC_DATA_IN, json, { qos: 1 }, (err) => {
+    if (err) {
+      log('❌ Gửi MQTT thất bại: ' + err.message,'#f85149');
+      setStatus('connected');
+      document.getElementById('btnSend').disabled = false;
+    } else {
+      setStatus('connected');
+      log(`✅ Đã gửi xong ${totalRay} bộ ray qua MQTT.`,'#3fb950');
+      log('⏳ Chờ ESP32-S3 xác nhận hoàn thành qua topic: ' + TOPIC_CONFIRM,'#e3b341');
+      document.getElementById('btnSend').disabled = false;
+    }
+  });
+}
+
+// ============================================================
+// COMPLETION
+// ============================================================
+function showCompletion(msg) {
+  const banner = document.getElementById('completionBanner');
+  document.getElementById('completionMsg').textContent = msg;
+  banner.classList.add('show');
+  banner.scrollIntoView({behavior:'smooth'});
+  log('🎉 HOÀN TẤT! ' + msg,'#3fb950');
+  setStatus('connected');
+}
+
+function resetAll() {
+  if (!confirm('Reset toàn bộ? Dữ liệu đã nhập sẽ mất.')) return;
+  totalRay = 0; currentTab = 0; rayData = []; doneFlags = [];
+  document.getElementById('tabsArea').style.display = 'none';
+  document.getElementById('sendCard').style.display = 'none';
+  document.getElementById('logArea').style.display = 'none';
+  document.getElementById('completionBanner').classList.remove('show');
+  document.getElementById('btnSend').disabled = false;
+  document.getElementById('totalRay').value = 1;
+  setStatus(mqttClient && mqttClient.connected ? 'connected' : '');
+}
+</script>
+</body>
+</html>
