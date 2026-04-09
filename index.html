@@ -508,7 +508,11 @@ const TOPIC_STATUS    = 'ray/status';    // ESP32 → Web: trạng thái
 function getMqttUrl() {
   const host = document.getElementById('mqttHost').value.trim();
   const port = document.getElementById('mqttPort').value.trim();
-  return `ws://${host}:${port}/mqtt`;
+  
+  // Nếu đang chạy trên GitHub Pages (HTTPS), bắt buộc dùng wss
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  
+  return `${protocol}://${host}:${port}/mqtt`;
 }
 
 function mqttConnect() {
