@@ -509,12 +509,15 @@ function getMqttUrl() {
   const host = document.getElementById('mqttHost').value.trim();
   const port = document.getElementById('mqttPort').value.trim();
   
-  // Nếu đang chạy trên GitHub Pages (HTTPS), bắt buộc dùng wss
+  // Kiểm tra nếu trang web đang chạy trên HTTPS (như GitHub Pages)
+  // thì bắt buộc dùng wss, ngược lại dùng ws
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   
+  // Lưu ý: HiveMQ cổng 8884 dùng đường dẫn /mqtt hoặc không tùy cấu hình, 
+  // nhưng đa số dùng `${protocol}://${host}:${port}/mqtt`
   return `${protocol}://${host}:${port}/mqtt`;
 }
-
+  
 function mqttConnect() {
   if (mqttClient && mqttClient.connected) {
     log('⚠ Đã kết nối rồi.','#e3b341');
