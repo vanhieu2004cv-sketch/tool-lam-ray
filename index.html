@@ -79,11 +79,12 @@ header {
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-bottom: 1px solid var(--border);
-  padding: 0 32px;
-  height: 68px;
+  padding: 10px 20px;
+  min-height: 68px;
   display: flex;
   align-items: center;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
   box-shadow: 0 1px 0 rgba(255,255,255,0.8), 0 4px 24px var(--shadow);
 }
 
@@ -94,14 +95,23 @@ header {
 .h-titles { display:flex; flex-direction:column; gap:1px; }
 .h-name {
   font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
-  font-weight:700;font-size:17px;
+  font-weight:800;font-size:28px;
   color:var(--accent);
   letter-spacing:.5px;
   line-height:1;
+  text-transform:uppercase;
 }
 .h-sub { font-size:11px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; font-weight:500; }
 
-.h-right { margin-left:auto; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.h-right { margin-left:auto; display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+@media(max-width:480px){
+  .h-logo { height:34px; }
+  .h-name { font-size:16px; }
+  .h-sep  { display:none; }
+  .designer-tag { display:none; }
+  .h-right { gap:8px; }
+  .mqtt-pill { padding:4px 10px; font-size:10.5px; }
+}
 
 .mqtt-pill {
   display:inline-flex;align-items:center;gap:6px;
@@ -192,8 +202,9 @@ main { max-width:900px; margin:0 auto; padding:36px 20px 60px; position:relative
 }
 .card-title {
   font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-weight:700;
-  font-size:16px;font-weight:700;
-  color:var(--text);letter-spacing:.2px;
+  font-size:18px;font-weight:700;
+  color:var(--accent);letter-spacing:.2px;
+  text-transform:uppercase;
 }
 .card-sub { font-size:11.5px;color:var(--muted);margin-top:2px; }
 
@@ -354,10 +365,17 @@ select.inp {
 /* ─── TAB NAV ─── */
 .tab-nav {
   display:flex;justify-content:space-between;align-items:center;
+  flex-wrap:wrap;gap:10px;
   margin-top:24px;padding-top:18px;
   border-top:1px solid rgba(191,219,254,.3);
 }
 .page-ind { font-size:12px;color:var(--muted);font-weight:500; }
+@media(max-width:480px){
+  .tab-nav { flex-direction:column; align-items:stretch; gap:8px; }
+  .tab-nav .btn { width:100%; justify-content:center; }
+  .tab-nav span[style] { display:flex; flex-direction:column; gap:8px; }
+  .page-ind { text-align:center; }
+}
 
 
 
@@ -444,9 +462,10 @@ select.inp {
 /* ─── SECTION TITLE ─── */
 .sec-title {
   font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-weight:700;font-size:18px;font-weight:700;
-  color:var(--text);letter-spacing:.2px;
+  color:var(--accent);letter-spacing:.2px;
   display:flex;align-items:center;gap:10px;
   margin-bottom:22px;
+  text-transform:uppercase;
 }
 
 /* ─── FOOTER ─── */
@@ -491,7 +510,7 @@ footer {
   <div class="h-sep"></div>
   <div class="h-titles">
     <div class="h-name">Tool Làm Ray</div>
-    <div class="h-sub">SmartHome Sài Gòn · ESP32-S3 via MQTT</div>
+    <div class="h-sub">SmartHome Sài Gòn</div>
   </div>
   <div class="h-right">
     <div class="mqtt-pill" id="mqttBadge">
@@ -510,15 +529,6 @@ footer {
 </header>
 
 <main>
-
-  <div class="page-intro">
-    <div class="page-icon">⚙</div>
-    <div>
-      <div class="page-title">Nhập thông số bộ ray</div>
-      <div class="page-desc">Cấu hình hàng loạt và truyền sang ESP32-S3 qua MQTT WebSocket</div>
-    </div>
-  </div>
-
   <!-- SETUP -->
   <div class="card">
     <div class="card-header">
