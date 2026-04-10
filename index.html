@@ -594,7 +594,7 @@ footer {
 <footer>
   <span style="font-size:13px;color:var(--muted);">
     <strong style="color:var(--accent);font-weight:700;">SmartHome Sài Gòn</strong>
-    &nbsp;·&nbsp; Tool Làm Ray v2.0
+    &nbsp;·&nbsp; Tool Làm Ray v4.0
     &nbsp;·&nbsp; Thiết kế bởi <strong style="color:var(--accent2);font-weight:600;">Pham Van Hieu</strong>
   </span>
 </footer>
@@ -632,7 +632,7 @@ function mqttConnect(){
   mqttClient.on('offline',()=>{log('📴 Offline.','#64748b');setMqttStatus('disconnected');});
 }
 function mqttDisconnect(){if(mqttClient){mqttClient.end(true);mqttClient=null;log('🔌 Ngắt kết nối.','#64748b');setMqttStatus('disconnected');setStatus('');}}
-window.addEventListener('load', mqttConnect);
+window.addEventListener('load', () => { mqttConnect(); generateTabs(); });
 function setMqttStatus(s){
   const b=document.getElementById('mqttBadge'),t=document.getElementById('mqttBadgeText');
   b.className='mqtt-pill';
@@ -682,7 +682,7 @@ function renderTabContent(i){
       <div class="fg">
         <label>Chiều dài ray (cm) <span class="req">*</span></label>
         <input class="inp" type="number" id="f_length" value="${d.ray_length}" min="1" max="9999" placeholder="VD: 350" style="width:150px;" oninput="autoSave()">
-        <div class="hint">Chiều dài ray nguyên liệu ban đầu</div>
+        <div class="hint">Chiều dài ray hoàn thiện</div>
       </div>
       <div class="fg">
         <label>Loại bi</label>
